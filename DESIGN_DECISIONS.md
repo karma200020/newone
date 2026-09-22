@@ -40,3 +40,15 @@ abstention. Recommendations are inert. Checkpoints persist concise decision
 summaries, not hidden chain-of-thought. This explainable baseline is intentionally
 less general than an LLM; the later optional model layer cannot bypass grounding
 or the policy engine.
+
+## Phase 5: hybrid retrieval
+
+Ingestion preserves tenant, service, document type, team, environment, version
+and timestamp metadata. Overlapping chunks have content hashes and source
+offsets. Exact cosine search and BM25 use reciprocal-rank fusion with a phrase
+reranker. The default signed-hash embedding is a reproducible lexical baseline,
+**not** a learned semantic model. An opt-in OpenAI embedding adapter supplies
+learned vectors; it sends selected documents to that provider and must only be
+enabled after data-governance approval. Persistent index files are versioned and
+integrity checked. Exact search is capped at 10,000 chunks; replace it with
+tenant-filtered pgvector/ANN before larger deployments.
