@@ -32,6 +32,7 @@ class ToolSpec(StrictModel):
     name: str
     source: Source
     description: str
+    investigation_default: bool = False
     input_schema: dict[str, Any] = Field(default_factory=lambda: ToolInput.model_json_schema())
     output_schema: dict[str, Any] = Field(default_factory=lambda: ToolOutput.model_json_schema())
 
@@ -87,7 +88,12 @@ class Provider(Protocol):
 class SyntheticProvider:
     async def discover(self) -> list[ToolSpec]:
         return [ToolSpec(name=name, source=source,
-                         description=f"Read synthetic {source.value}: {name.split('.')[1]}")
+                         description=f"Read synthetic {source.value}: {name.split('.')[1]}",
+                         investigation_default=name in {
+                             "monitoring.metrics", "logs.search", "deployments.list",
+                             "github.search", "jira.search", "slack.search",
+                             "documentation.runbooks", "database.query",
+                         })
                 for name, source in TOOL_SOURCES.items()]
 
     async def invoke(

@@ -29,3 +29,14 @@ service-scoped snapshot, never the application's state database. AST allowlists,
 read-only connection mode, row caps and a progress deadline provide layered
 defense. The deliberately narrow SELECT subset rejects joins, CTEs, arbitrary
 functions and administrative statements rather than trying to sanitize them.
+
+## Phase 4: explicit investigation state machine
+
+The default deterministic engine discovers read tools, fetches sources
+concurrently, reads diagnostic rules as untrusted runbook data and evaluates
+every rule against independent observed signals. It never reads scenario
+labels. Partial evidence, ties and contradictions reduce confidence or cause
+abstention. Recommendations are inert. Checkpoints persist concise decision
+summaries, not hidden chain-of-thought. This explainable baseline is intentionally
+less general than an LLM; the later optional model layer cannot bypass grounding
+or the policy engine.
