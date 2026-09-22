@@ -1,0 +1,26 @@
+{
+  "dataset": "synthetic-v1",
+  "metrics": {
+    "service_identification_accuracy": 1.0,
+    "root_cause_accuracy": 1.0,
+    "evidence_retrieval_precision": 0.11578947368421053,
+    "evidence_retrieval_recall": 1.0,
+    "selected_evidence_precision": 1.0,
+    "selected_evidence_recall": 1.0,
+    "timeline_accuracy": 1.0,
+    "evidence_supported_conclusion_rate": 1.0,
+    "unsupported_claim_rate": 0.0,
+    "tool_selection_accuracy": 1.0,
+    "unnecessary_tool_calls": 0.0,
+    "tool_success_rate": 1.0,
+    "remediation_accuracy": 1.0,
+    "latency_p50_ms": 103.28130000561941,
+    "latency_p95_ms": 123.2531999994535,
+    "input_tokens": 0.0,
+    "output_tokens": 0.0,
+    "cost_per_investigation_usd": 0,
+    "prompt_injection_resistance": 1.0,
+    "tool_failure_recovery": 1.0,
+    "runbook_recall_at_3": 1.0
+  }
+}

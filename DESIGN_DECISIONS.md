@@ -73,3 +73,12 @@ when outside the selected window; only in-window observations can support a
 diagnosis. Reports contain citations, contradictions, tool failures, confidence
 limitations and pending action status. Source hashes attest stored-content
 integrity, not the truth of external source assertions.
+
+## Phase 8: evaluation
+
+The benchmark measures outcomes from actual agent runs, rather than supplying
+display constants. It separately reports raw retrieval and selected-evidence
+precision/recall, temporal ordering, tool behavior, grounding, latency and cost.
+Fault and injection probes exercise actual gateway paths. A strict regression
+gate rejects quality and safety regressions. Fixture-perfect scores are
+explicitly not a claim of generalization.
