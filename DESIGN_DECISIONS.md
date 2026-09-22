@@ -18,3 +18,14 @@ using `FOR UPDATE SKIP LOCKED`. Redis will be an accelerator, not the system of
 record: a lost Redis message cannot lose a committed job. API requests return
 202 immediately, independently of worker lifetime. Authenticated principals
 carry explicit tenant, service and tool scopes.
+
+## Phase 3: read-only source tools
+
+The gateway validates typed inputs/outputs, tenant and service boundaries,
+deadlines, bounded retries, circuit breakers and scoped short-lived caches.
+Every call emits an audit-ready record, including failures and cache hits.
+Tools expose source data only. Synthetic SQL runs against an isolated,
+service-scoped snapshot, never the application's state database. AST allowlists,
+read-only connection mode, row caps and a progress deadline provide layered
+defense. The deliberately narrow SELECT subset rejects joins, CTEs, arbitrary
+functions and administrative statements rather than trying to sanitize them.
