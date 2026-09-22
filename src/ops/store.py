@@ -72,6 +72,20 @@ class SimulationRow(Base):
     revision: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class WorkerHeartbeatRow(Base):
+    __tablename__ = "worker_heartbeats"
+    worker_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    timestamp: Mapped[float] = mapped_column(Float)
+
+
+class EvaluationRow(Base):
+    __tablename__ = "evaluations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(String(100), index=True)
+    timestamp: Mapped[float] = mapped_column(Float, default=lambda: utcnow().timestamp())
+    report: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
 class ConflictError(Exception):
     pass
 
@@ -95,6 +109,24 @@ class Store:
 
     def initialize(self) -> None:
         Base.metadata.create_all(self.engine)
+
+    def heartbeat(self, worker_id: str) -> None:
+        with self.sessions.begin() as session:
+            row = session.get(WorkerHeartbeatRow, worker_id)
+            if row is None:
+                session.add(WorkerHeartbeatRow(worker_id=worker_id, timestamp=utcnow().timestamp()))
+            else:
+                row.timestamp = utcnow().timestamp()
+
+    def worker_ready(self, worker_id: str | None = None) -> bool:
+        with self.sessions() as session:
+            query = select(WorkerHeartbeatRow).where(
+                WorkerHeartbeatRow.timestamp
+                > utcnow().timestamp() - self.settings.job_lease_seconds - 15,
+            )
+            if worker_id:
+                query = query.where(WorkerHeartbeatRow.worker_id == worker_id)
+            return session.scalar(query.limit(1)) is not None
 
     def audit(
         self,

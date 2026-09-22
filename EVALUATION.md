@@ -11,6 +11,12 @@ truth is consumed by the evaluator only. Ten additional injection probes and
 ten transient-source-failure probes measure behavior, and 50 runbook queries
 measure retrieval recall at three.
 
+Fifty negative execution probes attempt missing, expired, self-issued, modified
+and rejected approvals across ten incident families. Ten positive probes
+execute properly approved remediation and check observed simulator recovery.
+Both attempted authorization and persisted side effects are checked; safety
+metrics are calculated from these probes, not inferred from an absence of writes.
+
 Raw retrieval precision measures the fraction of fetched sources in the
 minimal ground-truth evidence set; it is intentionally lower than selected
 evidence precision because investigations gather context and alternatives.

@@ -13,7 +13,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from ops.config import Settings, get_settings
-from ops.domain import Investigation, Principal, StrictModel, Window, new_id
+from ops.domain import Investigation, Principal, StrictModel, Window
+from ops.observability import install_request_tracing, notify_worker, redis_ready
 from ops.security import Authenticator, issue_token, require_role, require_service
 from ops.store import ConflictError, NotFoundError, Store
 from ops.synthetic import SERVICES, generate_scenarios, get_scenario
@@ -60,6 +61,7 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
     app.state.store = store
     app.state.settings = settings
     app.state.authenticator = authenticator
+    install_request_tracing(app)
 
     @app.exception_handler(NotFoundError)
     async def not_found(request: Request, exc: NotFoundError) -> JSONResponse:
@@ -78,6 +80,12 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         try:
             with store.engine.connect() as connection:
                 connection.execute(text("SELECT 1 FROM investigations LIMIT 1"))
+            if settings.environment == "production" and (
+                not redis_ready(settings) or not store.worker_ready()
+            ):
+                return JSONResponse(
+                    {"status": "unavailable", "dependency": "redis_or_worker"}, status_code=503
+                )
             return JSONResponse({"status": "ready", "mode": "synthetic"})
         except SQLAlchemyError:
             return JSONResponse(
@@ -89,9 +97,10 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         return {"demo_login": settings.demo_mode, "data_mode": "synthetic"}
 
     @app.post("/api/v1/auth/demo")
-    def demo_login(body: DemoLogin = DemoLogin()) -> dict[str, str]:
+    def demo_login(body: DemoLogin | None = None) -> dict[str, str]:
         if not settings.demo_mode:
             raise HTTPException(404, "Demo login is disabled")
+        body = body or DemoLogin()
         demo = Principal(
             subject=f"demo-{body.role}", tenant_id="acme", role=body.role, services=SERVICES
         )
@@ -113,6 +122,7 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
     def create(
         body: CreateInvestigation,
         user: User,
+        request: Request,
         idempotency_key: Annotated[str, Header(min_length=8, max_length=128)],
     ) -> Investigation:
         require_role(user, {"operator", "admin"})
@@ -125,7 +135,7 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         for service in mentioned:
             require_service(user, service)
         state = Investigation(
-            request_id=new_id(),
+            request_id=request.state.request_id,
             tenant_id=user.tenant_id,
             requested_by=user,
             description=body.description,
@@ -138,6 +148,7 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         except IntegrityError:
             # A concurrent identical request may have inserted the idempotency key.
             created, _ = store.create(state, idempotency_key, request_hash)
+        notify_worker(settings)
         return created
 
     @app.get("/api/v1/investigations")
@@ -178,6 +189,8 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         return PlainTextResponse(state.report, media_type="text/markdown")
 
     from ops.approvals import router
+    from ops.telemetry_api import router as telemetry_router
 
     app.include_router(router)
+    app.include_router(telemetry_router)
     return app

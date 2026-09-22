@@ -8,10 +8,14 @@ from ops.worker import run_once
 
 
 async def test_human_decision_is_atomic_and_idempotent(
-    client: TestClient, store: Store, settings: Settings, user: Principal,
+    client: TestClient,
+    store: Store,
+    settings: Settings,
+    user: Principal,
 ) -> None:
     created = client.post(
-        "/api/v1/investigations", headers={"Idempotency-Key": "approval-test"},
+        "/api/v1/investigations",
+        headers={"Idempotency-Key": "approval-test"},
         json={"description": "Investigate checkout-service elevated 5xx errors."},
     ).json()
     await run_once(store, settings)

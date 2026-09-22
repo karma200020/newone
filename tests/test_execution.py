@@ -13,8 +13,12 @@ from ops.worker import run_once
 
 
 async def prepare(store: Store, settings: Settings, user: Principal) -> Investigation:
-    state = Investigation(tenant_id="acme", requested_by=user, scenario_id="INC-001",
-                          description="Investigate checkout-service elevated 5xx errors.")
+    state = Investigation(
+        tenant_id="acme",
+        requested_by=user,
+        scenario_id="INC-001",
+        description="Investigate checkout-service elevated 5xx errors.",
+    )
     store.create(state, state.id, state.id)
     await run_once(store, settings)
     return store.get("acme", state.id)
@@ -29,17 +33,24 @@ def approve(store: Store, state: Investigation, *, wrong_action: bool = False) -
             action.kind = ActionKind.RESTART
             action.parameters = {"component": "redis"}
         action.status = "approved"
-        current.approvals.append(Approval(
-            action_id=action.id, action_digest=action_digest(action),
-            actor="independent-approver", decision="approve",
-            expires_at=utcnow() + timedelta(minutes=15),
-        ))
+        current.approvals.append(
+            Approval(
+                action_id=action.id,
+                action_digest=action_digest(action),
+                actor="independent-approver",
+                decision="approve",
+                expires_at=utcnow() + timedelta(minutes=15),
+            )
+        )
         store.enqueue(session, current, "execute", action.id)
+
     store.mutate("acme", state.id, update)
 
 
 async def test_approved_execution_is_idempotent_and_verified(
-    store: Store, settings: Settings, user: Principal,
+    store: Store,
+    settings: Settings,
+    user: Principal,
 ) -> None:
     state = await prepare(store, settings, user)
     approve(store, state)
@@ -55,7 +66,9 @@ async def test_approved_execution_is_idempotent_and_verified(
 
 
 async def test_wrong_remediation_does_not_fake_recovery(
-    store: Store, settings: Settings, user: Principal,
+    store: Store,
+    settings: Settings,
+    user: Principal,
 ) -> None:
     state = await prepare(store, settings, user)
     approve(store, state, wrong_action=True)
@@ -66,7 +79,9 @@ async def test_wrong_remediation_does_not_fake_recovery(
 
 
 async def test_injected_job_without_approval_is_denied(
-    store: Store, settings: Settings, user: Principal,
+    store: Store,
+    settings: Settings,
+    user: Principal,
 ) -> None:
     state = await prepare(store, settings, user)
     with store.sessions.begin() as session:

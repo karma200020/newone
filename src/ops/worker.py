@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
 
 from ops.agent import Investigator
 from ops.config import Settings, get_settings
 from ops.domain import Investigation, Status
 from ops.mcp_client import open_provider
+from ops.observability import JOBS, TOOL_LATENCY, configure_logging
 from ops.store import ConflictError, Store
 from ops.tools import ToolGateway, redact
 
@@ -38,6 +42,11 @@ async def run_once(store: Store, settings: Settings) -> bool:
         store.mutate(job.tenant_id, job.investigation_id, save)
 
     def audit(data: dict[str, object]) -> None:
+        call = data.get("call")
+        if isinstance(call, dict):
+            TOOL_LATENCY.labels(str(data["tool"]), call.get("error_code") or "success").observe(
+                float(call["duration_ms"]) / 1000
+            )
         with store.sessions.begin() as session:
             store.audit(session, job.tenant_id, "worker", "tool.called", data, state.id)
 
@@ -47,11 +56,13 @@ async def run_once(store: Store, settings: Settings) -> bool:
 
             execute_action(store, job)
             store.finish(job)
+            JOBS.labels(job.kind, "success").inc()
             return True
         if job.kind != "investigate":
             raise ValueError("Unsupported job kind")
         if state.status == Status.DIAGNOSED:
             store.finish(job)
+            JOBS.labels(job.kind, "success").inc()
             return True
         async with open_provider(settings, state.requested_by) as provider:
             gateway = ToolGateway(
@@ -60,7 +71,15 @@ async def run_once(store: Store, settings: Settings) -> bool:
                 retries=settings.tool_retries,
                 audit=audit,
             )
-            await Investigator(gateway, checkpoint).run(state)
+
+            async def enrich(current: Investigation) -> None:
+                from ops.model import enrich_with_model
+
+                await enrich_with_model(current, settings)
+
+            await Investigator(
+                gateway, checkpoint, enrich=enrich if settings.llm_enabled else None
+            ).run(state)
         store.finish(job)
     except ConflictError:
         logger.warning("Worker lease or state conflict", extra={"job_id": job.id})
@@ -68,6 +87,7 @@ async def run_once(store: Store, settings: Settings) -> bool:
         # Worker boundary: preserve a visible failure and retry the durable job.
         logger.exception("Investigation job failed", extra={"job_id": job.id})
         message = redact(f"{type(exc).__name__}: {exc}")[:500]
+        JOBS.labels(job.kind, "error").inc()
         try:
 
             def failed(current: Investigation, session: Session) -> None:
@@ -75,7 +95,9 @@ async def run_once(store: Store, settings: Settings) -> bool:
                 current.warnings.append(f"Worker attempt {job.attempts} failed: {message}")
                 if job.kind == "investigate":
                     current.status = (
-                        Status.FAILED if job.attempts >= settings.max_job_attempts else Status.QUEUED
+                        Status.FAILED
+                        if job.attempts >= settings.max_job_attempts
+                        else Status.QUEUED
                     )
                 else:
                     action = next((a for a in current.actions if a.id == job.target), None)
@@ -96,11 +118,28 @@ async def serve() -> None:
     store = Store(settings)
     if settings.environment != "production":
         store.initialize()
-    logging.basicConfig(level=logging.INFO)
-    while True:
-        worked = await run_once(store, settings)
-        if not worked:
-            await asyncio.sleep(1)
+    configure_logging()
+    redis = (
+        Redis.from_url(settings.redis_url, socket_timeout=3, socket_connect_timeout=1)
+        if settings.redis_url
+        else None
+    )
+    try:
+        while True:
+            store.heartbeat(socket.gethostname())
+            worked = await run_once(store, settings)
+            if not worked:
+                if redis:
+                    try:
+                        await redis.blpop("ops:wake", timeout=1)
+                    except RedisError:
+                        logger.warning("Redis unavailable; polling durable queue")
+                        await asyncio.sleep(1)
+                else:
+                    await asyncio.sleep(1)
+    finally:
+        if redis:
+            await redis.aclose()
 
 
 if __name__ == "__main__":

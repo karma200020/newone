@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     job_lease_seconds: int = 300
     max_job_attempts: int = 3
     llm_api_key: SecretStr | None = None
+    llm_enabled: bool = False
     llm_model: str = "gpt-4.1-mini"
     llm_escalation_model: str = "gpt-4.1"
     llm_input_cost_per_million: float = 0.40
@@ -35,6 +36,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def production_guardrails(self) -> "Settings":
+        if self.llm_enabled and not self.llm_api_key:
+            raise ValueError("Enabled model assistance requires OPS_LLM_API_KEY")
         if len(self.signing_key.get_secret_value()) < 32:
             raise ValueError("OPS_SIGNING_KEY must have at least 32 characters")
         if self.environment == "production":

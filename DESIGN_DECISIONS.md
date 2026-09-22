@@ -110,3 +110,19 @@ contains the private fixture fault model; the investigator cannot access it.
 A wrong but permitted remediation leaves the fault active and produces
 `unverified`, not a success-shaped response. Real enterprise write adapters are
 deliberately absent until provider-specific idempotency and safety controls exist.
+
+## Phase 12: observability and cost
+
+HTTP requests have generated correlation IDs, structured redacted logs,
+Prometheus counters/histograms and browser security headers. Durable traces
+carry incident/run IDs, tool latency, retries, failures, approvals and outcomes.
+Signed audit envelopes can be inspected through a scoped API. Workers emit
+heartbeats; production readiness checks the database, Redis and worker fleet.
+Redis wakeups reduce queue latency but polling recovers lost notifications.
+Persisted benchmark runs power the dashboard; no display metrics are invented.
+
+Optional model assistance requires both `OPS_LLM_ENABLED=true` and a provider
+key; setting a key alone does not transmit evidence. The model can corroborate,
+disagree with or abstain from an existing tested hypothesis, never generate
+actions, source IDs or new root-cause prose. It runs before final publication,
+validates citations, records actual provider token usage and exposes failures.

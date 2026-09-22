@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 
 from pydantic import ValidationError
@@ -34,9 +34,15 @@ def trace(
 
 
 class Investigator:
-    def __init__(self, gateway: ToolGateway, checkpoint: Checkpoint | None = None):
+    def __init__(
+        self,
+        gateway: ToolGateway,
+        checkpoint: Checkpoint | None = None,
+        enrich: Callable[[Investigation], Awaitable[None]] | None = None,
+    ):
         self.gateway = gateway
         self.checkpoint = checkpoint
+        self.enrich = enrich
 
     def save(self, state: Investigation) -> None:
         if self.checkpoint:
@@ -204,11 +210,49 @@ class Investigator:
                     missing_signals=missing,
                     score=score,
                     test_summary=f"{len(matched)}/{len(rule.signals)} signals across "
-                    f"{source_count} independent source types; {len(contradicting)} contradictions.",
+                    f"{source_count} independent source types; "
+                    f"{len(contradicting)} contradictions.",
                 )
             )
         state.hypotheses.sort(key=lambda h: (-h.score, h.id))
         self.diagnose(state, rules)
+        retrieval_tools = [
+            tool
+            for tool in catalog
+            if tool.source == Source.DOCUMENTATION and not tool.investigation_default
+        ]
+        if state.actions and retrieval_tools:
+            result = await self.gateway.call(
+                retrieval_tools[0].name,
+                ToolInput(
+                    service=services[0],
+                    scenario_id=state.scenario_id,
+                    query=state.actions[0].reason,
+                    limit=3,
+                    metadata={"document_type": "runbook"},
+                ),
+                state.requested_by,
+            )
+            state.usage.retrieval_calls += 1
+            state.tool_calls.append(result.call)
+            for item in result.evidence:
+                if item.id not in known:
+                    state.evidence.append(item)
+                    known.add(item.id)
+            trace(
+                state,
+                "retrieval",
+                "Hybrid runbook retrieval for the proposed remediation.",
+                result.call.evidence_ids,
+            )
+            if result.error:
+                state.warnings.append(f"Remediation retrieval: {result.error.message}")
+                if state.diagnosis:
+                    state.diagnosis.confidence = "medium"
+                    state.diagnosis.uncertainty.append(state.warnings[-1])
+        if self.enrich and state.diagnosis:
+            validate_provenance(state)
+            await self.enrich(state)
         state.status = Status.DIAGNOSED
         trace(
             state,
@@ -238,7 +282,9 @@ class Investigator:
                 root_cause="Insufficient evidence to distinguish the competing hypotheses.",
                 hypothesis_id=None,
                 confidence="low",
-                confidence_explanation="No uniquely supported hypothesis meets the evidence threshold.",
+                confidence_explanation=(
+                    "No uniquely supported hypothesis meets the evidence threshold."
+                ),
                 supporting_evidence=[],
                 contradictory_evidence=[],
                 uncertainty=uncertainty + ["Collect additional independent telemetry."],
