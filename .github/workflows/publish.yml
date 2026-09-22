@@ -1,0 +1,38 @@
+name: Publish verified image
+
+on:
+  workflow_run:
+    workflows: ["Continuous verification"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: image-publishing
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PUBLISH_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: login
+      - name: Build and publish immutable verified commit
+        env:
+          REGISTRY: ${{ steps.login.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          test -n "$REPOSITORY"
+          docker build --tag "$REGISTRY/$REPOSITORY:$COMMIT" .
+          docker push "$REGISTRY/$REPOSITORY:$COMMIT"

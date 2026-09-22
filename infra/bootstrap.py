@@ -80,9 +80,7 @@ def main() -> None:
             )
             if cursor.fetchone() is not None:
                 raise SystemExit("Refusing an ops_app identity with unexpected role memberships.")
-            cursor.execute(
-                sql.SQL("GRANT ops_owner TO {}").format(sql.Identifier(admin_username))
-            )
+            cursor.execute(sql.SQL("GRANT ops_owner TO {}").format(sql.Identifier(admin_username)))
             database = sql.Identifier(database_name)
             cursor.execute(sql.SQL("REVOKE ALL ON DATABASE {} FROM PUBLIC").format(database))
             cursor.execute(sql.SQL("REVOKE ALL ON DATABASE {} FROM ops_app").format(database))

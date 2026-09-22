@@ -1,0 +1,46 @@
+name: Approved AWS deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Previously verified immutable Git commit SHA to deploy"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      API_SERVICE: ${{ vars.API_SERVICE }}
+      WORKER_SERVICE: ${{ vars.WORKER_SERVICE }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deployment input
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "An immutable commit SHA is required"; exit 1; }
+          test -n "$AWS_REGION" && test -n "$ECR_REPOSITORY"
+          test -n "$ECS_CLUSTER" && test -n "$API_SERVICE" && test -n "$WORKER_SERVICE"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy previously published digest
+        shell: bash
+        run: python scripts/deploy_ecs.py

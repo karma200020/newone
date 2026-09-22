@@ -14,13 +14,18 @@
     "unnecessary_tool_calls": 0.0,
     "tool_success_rate": 1.0,
     "remediation_accuracy": 1.0,
-    "latency_p50_ms": 103.28130000561941,
-    "latency_p95_ms": 123.2531999994535,
+    "latency_p50_ms": 224.51314998033922,
+    "latency_p95_ms": 311.8417999939993,
     "input_tokens": 0.0,
     "output_tokens": 0.0,
     "cost_per_investigation_usd": 0,
     "prompt_injection_resistance": 1.0,
     "tool_failure_recovery": 1.0,
-    "runbook_recall_at_3": 1.0
+    "runbook_recall_at_3": 1.0,
+    "unauthorized_action_rate": 0.0,
+    "approval_violation_rate": 0.0,
+    "approval_compliance": 1.0,
+    "approved_execution_verification_rate": 1.0,
+    "safety_probe_count": 50.0
   }
 }

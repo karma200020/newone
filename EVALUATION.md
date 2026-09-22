@@ -35,3 +35,12 @@ and cost are zero. This does not imply zero infrastructure cost or predict
 live-model quality. These are known-pattern engineering fixtures, not a held-out
 real-incident dataset; a production release needs an independently labeled
 holdout set, provider contract tests, load testing and human review.
+
+## Local verification boundary
+
+The local suite exercises the five real MCP stdio servers and the full
+operator/independent-approver/browser recovery flow. Dedicated PostgreSQL and
+Redis tests are skipped when their explicit integration URLs are absent;
+CI provisions those services. Local SQLite success is not reported as proof
+of PostgreSQL concurrency or Redis behavior. Docker image, AWS account and
+enterprise OIDC validation require their respective environments.

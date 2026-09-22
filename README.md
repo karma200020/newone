@@ -20,7 +20,7 @@ the local SQLite demonstration.
 
 ```powershell
 py -m venv .venv
-.\.venv\Scripts\python -m pip install -e ".[dev]"
+.\.venv\Scripts\python -m pip install --constraint requirements.lock -e ".[dev]"
 .\.venv\Scripts\python -m ops.cli init --demo
 .\.venv\Scripts\python -m ops.cli evaluate --persist
 .\.venv\Scripts\python -m ops.cli serve
