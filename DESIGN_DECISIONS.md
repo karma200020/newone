@@ -63,3 +63,13 @@ catalog. The trusted worker binds each subprocess identity; tool arguments canno
 choose a tenant or role. Local and MCP transports share source adapters.
 Provider-specific live enterprise API adapters are not implemented; MCP is real,
 but the data behind these servers remains synthetic.
+
+## Phase 7: provenance enforcement
+
+Evidence identities derive from tenant, source ID and redacted-content hash.
+Finalization rejects invented IDs, altered content, unsupported diagnoses and
+citations to quarantined content. All tool results remain in the manifest even
+when outside the selected window; only in-window observations can support a
+diagnosis. Reports contain citations, contradictions, tool failures, confidence
+limitations and pending action status. Source hashes attest stored-content
+integrity, not the truth of external source assertions.

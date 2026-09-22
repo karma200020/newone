@@ -12,6 +12,7 @@ from ops.domain import (
     Status, TimelineEntry, TraceEvent, Window, utcnow,
 )
 from ops.tools import ToolGateway, ToolInput
+from ops.provenance import render_report, validate_provenance
 
 Checkpoint = Callable[[Investigation], None]
 
@@ -109,8 +110,6 @@ class Investigator:
                 )
                 state.warnings.append("Incident window inferred from observed synthetic telemetry.")
         if state.window:
-            state.evidence = [e for e in state.evidence if e.source_type == Source.DOCUMENTATION
-                              or state.window.start <= e.timestamp <= state.window.end]
             telemetry = [e for e in telemetry if state.window.start <= e.timestamp <= state.window.end]
         state.timeline = [
             TimelineEntry(timestamp=e.timestamp, summary=e.content[:220], evidence_ids=[e.id])
@@ -135,7 +134,9 @@ class Investigator:
                 except ValidationError:
                     state.warnings.append(f"Invalid diagnostic rule in {evidence.source_id}")
         observations = [e for e in state.evidence
-                        if e.source_type != Source.DOCUMENTATION and not e.suspicious]
+                        if e.source_type != Source.DOCUMENTATION and not e.suspicious
+                        and (state.window is None
+                             or state.window.start <= e.timestamp <= state.window.end)]
         state.hypotheses = []
         for rule in rules:
             supporting = [e for e in observations if e.attributes.get("signal") in rule.signals]
@@ -160,6 +161,8 @@ class Investigator:
         state.status = Status.DIAGNOSED
         trace(state, "diagnosis", state.diagnosis.root_cause if state.diagnosis else "Inconclusive",
               state.diagnosis.supporting_evidence if state.diagnosis else [])
+        validate_provenance(state)
+        state.report = render_report(state)
         self.save(state)
         return state
 

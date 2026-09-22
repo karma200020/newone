@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import Field
 from sqlalchemy import text
@@ -152,5 +152,12 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         investigation_id: str, user: User,
     ) -> Investigation:
         return accessible(investigation_id, user)
+
+    @app.get("/api/v1/investigations/{investigation_id}/report")
+    def report(investigation_id: str, user: User) -> PlainTextResponse:
+        state = accessible(investigation_id, user)
+        if state.report is None:
+            raise HTTPException(409, "Report is not yet available")
+        return PlainTextResponse(state.report, media_type="text/markdown")
 
     return app
