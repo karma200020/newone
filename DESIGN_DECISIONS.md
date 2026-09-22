@@ -100,3 +100,13 @@ Decision, audit record and execution-job insertion commit in one transaction.
 Repeated identical decisions are idempotent; conflicting or stale decisions
 return 409. Rejection never queues execution. Demo mode offers distinct
 operator and approver identities and is prohibited in production.
+
+## Phase 11: isolated execution and verification
+
+Only a transactional simulator can mutate state. Worker lease fencing,
+rechecked policy, action-ID idempotency, simulator effects, fresh verification
+evidence and the execution record share one database transaction. The simulator
+contains the private fixture fault model; the investigator cannot access it.
+A wrong but permitted remediation leaves the fault active and produces
+`unverified`, not a success-shaped response. Real enterprise write adapters are
+deliberately absent until provider-specific idempotency and safety controls exist.

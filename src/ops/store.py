@@ -64,6 +64,14 @@ class ExecutionRow(Base):
     result: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
+class SimulationRow(Base):
+    __tablename__ = "simulation_state"
+    investigation_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(100), index=True)
+    fault_active: Mapped[bool]
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class ConflictError(Exception):
     pass
 

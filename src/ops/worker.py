@@ -42,6 +42,12 @@ async def run_once(store: Store, settings: Settings) -> bool:
             store.audit(session, job.tenant_id, "worker", "tool.called", data, state.id)
 
     try:
+        if job.kind == "execute":
+            from ops.execution import execute_action
+
+            execute_action(store, job)
+            store.finish(job)
+            return True
         if job.kind != "investigate":
             raise ValueError("Unsupported job kind")
         if state.status == Status.DIAGNOSED:
@@ -67,9 +73,16 @@ async def run_once(store: Store, settings: Settings) -> bool:
             def failed(current: Investigation, session: Session) -> None:
                 store.check_lease(session, job)
                 current.warnings.append(f"Worker attempt {job.attempts} failed: {message}")
-                current.status = (
-                    Status.FAILED if job.attempts >= settings.max_job_attempts else Status.QUEUED
-                )
+                if job.kind == "investigate":
+                    current.status = (
+                        Status.FAILED if job.attempts >= settings.max_job_attempts else Status.QUEUED
+                    )
+                else:
+                    action = next((a for a in current.actions if a.id == job.target), None)
+                    if action:
+                        action.verification = f"Execution failed: {message}"
+                        if job.attempts >= settings.max_job_attempts:
+                            action.status = "failed"
 
             store.mutate(job.tenant_id, job.investigation_id, failed)
             store.finish(job, message)
