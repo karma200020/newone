@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import sqlite3
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Protocol
 
 from fastapi import HTTPException
@@ -95,6 +97,9 @@ class Provider(Protocol):
 
 
 class SyntheticProvider:
+    def __init__(self, document_index: Path | None = None):
+        self.document_index = document_index
+
     async def discover(self) -> list[ToolSpec]:
         return [
             ToolSpec(
@@ -131,6 +136,19 @@ class SyntheticProvider:
             and record.service == arguments.service
             and record.tenant_id == principal.tenant_id
         ]
+        index = None
+        document_index = getattr(self, "document_index", None)
+        if TOOL_SOURCES[name] == Source.DOCUMENTATION and document_index:
+            from ops.retrieval import HybridRetriever
+
+            index = HybridRetriever.load(document_index)
+            indexed_records = {
+                chunk.record.source_id: chunk.record
+                for chunk in index.chunks
+                if chunk.record.tenant_id == principal.tenant_id
+                and chunk.record.service == arguments.service
+            }
+            records = list(indexed_records.values())
         if arguments.window and TOOL_SOURCES[name] != Source.DOCUMENTATION:
             records = [
                 r for r in records if arguments.window.start <= r.timestamp <= arguments.window.end
@@ -165,7 +183,7 @@ class SyntheticProvider:
         elif name == "documentation.search":
             from ops.retrieval import HybridRetriever
 
-            hits = HybridRetriever(records).search(
+            hits = (index or HybridRetriever(records)).search(
                 arguments.query,
                 service=arguments.service,
                 tenant_id=principal.tenant_id,
@@ -252,6 +270,7 @@ class ToolGateway:
         )
         circuit_key = f"{principal.tenant_id}:{name}"
         try:
+            arguments = ToolInput.model_validate(arguments.model_dump())
             require_tool(principal, name)
             require_service(principal, arguments.service)
             failures, opened = self.failures.get(circuit_key, (0, 0))
@@ -273,18 +292,23 @@ class ToolGateway:
                             self.provider.invoke(name, arguments, principal),
                             self.timeout,
                         )
-                        output = ToolOutput.model_validate(raw)
-                        if len(output.model_dump_json()) > 250_000:
+                        validated = ToolOutput.model_validate(
+                            raw.model_dump() if isinstance(raw, ToolOutput) else raw
+                        )
+                        if len(validated.model_dump_json()) > 250_000:
                             raise ValueError("Tool output exceeds size policy")
-                        for record in output.records:
+                        for record in validated.records:
                             if (
                                 record.tenant_id != principal.tenant_id
                                 or record.service != arguments.service
                             ):
                                 raise PermissionError("Tool returned out-of-scope evidence")
+                        output = validated
                         self.cache[key] = (time.monotonic(), output)
                         self.failures.pop(circuit_key, None)
                         break
+                    except PermissionError:
+                        raise
                     except (TimeoutError, ConnectionError, OSError) as exc:
                         self.failures[circuit_key] = (failures + attempt + 1, time.monotonic())
                         if attempt == self.retries:
@@ -305,6 +329,8 @@ class ToolGateway:
                     )
         except (PermissionError, HTTPException) as exc:
             result.error = ToolError(code="forbidden", message=redact(str(exc)))
+        except sqlite3.Error as exc:
+            result.error = ToolError(code="database_error", message=redact(str(exc))[:500])
         except (ValidationError, ValueError, UnsafeQuery) as exc:
             result.error = ToolError(code="invalid_output_or_input", message=redact(str(exc))[:500])
         finally:

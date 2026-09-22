@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Acme Ops Engineer | Command center</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <a class="brand" href="/" aria-label="Acme Ops Engineer home">
+        <span class="brand-mark" aria-hidden="true">a<span>.</span></span>
+        <span>acme<span class="brand-sub">OPS ENGINEER</span></span>
+      </a>
+      <div class="workspace-label">OPERATIONS WORKSPACE</div>
+      <nav aria-label="Main">
+        <button type="button" class="nav-item active" data-view="investigations" aria-current="page"><span class="nav-icon" aria-hidden="true">01</span>Investigations</button>
+        <button type="button" class="nav-item" data-view="approvals"><span class="nav-icon" aria-hidden="true">02</span>Approvals</button>
+        <button type="button" class="nav-item" data-view="evaluations"><span class="nav-icon" aria-hidden="true">03</span>Evaluations</button>
+      </nav>
+      <div class="sidebar-note"><span class="eyebrow">EVIDENCE BEFORE ACTION</span><p>Traceable diagnoses.<br>Explicit human approval.<br>Isolated execution.</p></div>
+      <div class="identity">
+        <span class="identity-avatar" aria-hidden="true">ID</span>
+        <div><strong id="identity-name">Not connected</strong><span id="identity-role">Authenticate to continue</span></div>
+      </div>
+      <button id="sign-out" class="button subtle" type="button" hidden>Switch identity / sign out</button>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div><span class="eyebrow">ACME / OPERATIONS</span><span class="topbar-title">Command center</span></div>
+        <div class="connection"><span id="connection-dot" class="connection-dot" aria-hidden="true"></span><span id="connection-status">Not connected</span></div>
+      </header>
+      <div id="mode-banner" class="mode-banner" role="status"><span class="mode-tag">DATA MODE</span><span id="mode-copy">Checking server configuration. No live infrastructure connection is implied.</span><button id="config-retry" type="button" class="text-button" hidden>Retry configuration</button></div>
+      <main id="main" tabindex="-1">
+        <section id="login-panel" class="login-layout" aria-labelledby="login-title">
+          <div class="login-intro">
+            <span class="eyebrow accent">ACME OPS ENGINEER</span>
+            <h1 id="login-title">Clarity for every<br>operational decision.</h1>
+            <p class="lead">Investigate incidents, follow the evidence, and review actions in one accountable workspace.</p>
+            <div class="principle"><span>01</span><div><strong>Grounded investigations</strong><p>Inspect source records, tested hypotheses, and provenance.</p></div></div>
+            <div class="principle"><span>02</span><div><strong>Human-controlled actions</strong><p>A separate approver reviews the exact proposal before execution.</p></div></div>
+          </div>
+          <div class="panel login-card">
+            <span class="eyebrow">SECURE WORKSPACE ACCESS</span>
+            <h2>Connect your identity</h2>
+            <p class="muted">Use a bearer token issued for this server. Your token stays in this page's memory and is cleared on sign out or refresh.</p>
+            <form id="login-form">
+              <label for="token">Access token</label>
+              <input id="token" name="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="Paste your bearer token" aria-describedby="token-help">
+              <p id="token-help" class="help">Never paste credentials from a different service.</p>
+              <button id="login-submit" type="submit" class="button primary full-width">Connect workspace <span aria-hidden="true">&rarr;</span></button>
+            </form>
+            <p id="login-message" class="message" role="alert" hidden></p>
+            <div id="demo-login" class="demo-login" hidden>
+              <div class="divider"><span>SERVER-ENABLED DEMO IDENTITIES</span></div>
+              <div class="button-row"><button type="button" class="button secondary" data-demo-role="operator">Demo operator</button><button type="button" class="button secondary" data-demo-role="approver">Demo approver</button></div>
+              <p class="help">Start investigations as operator. Sign out and connect as approver to review them. Requesters cannot approve their own actions.</p>
+            </div>
+          </div>
+        </section>
+
+        <div id="authenticated-workspace" hidden>
+          <div id="notice" class="message" role="status" hidden></div>
+          <div id="refresh-error" class="message error" role="alert" hidden></div>
+          <section id="view-investigations" aria-labelledby="investigations-title">
+            <div class="page-heading"><div><span class="eyebrow">INVESTIGATE / UNDERSTAND / RESOLVE</span><h1 id="investigations-title" tabindex="-1">Investigations</h1><p>From incident signal to evidence-backed diagnosis.</p></div><button type="button" class="button secondary refresh-button">Refresh data</button></div>
+            <div class="investigation-layout">
+              <div class="panel">
+                <div class="panel-heading"><h2>Investigation queue</h2><span id="investigation-count" class="count">Not loaded</span></div>
+                <div id="investigation-list" class="queue"><p class="empty">Loading investigations...</p></div>
+              </div>
+              <section class="panel composer" aria-labelledby="new-title">
+                <div class="panel-heading"><h2 id="new-title">New investigation</h2><span class="small-accent" aria-hidden="true">+</span></div>
+                <form id="investigation-form">
+                  <label for="scenario">Scenario</label>
+                  <select id="scenario" name="scenario" required disabled><option value="">Loading scenarios...</option></select>
+                  <p id="scenario-description" class="help">Scenarios are supplied by the authenticated API.</p>
+                  <label for="incident">Incident description</label>
+                  <textarea id="incident" name="incident" rows="5" minlength="10" maxlength="4000" required placeholder="Describe the affected service, symptoms, and operational context." aria-describedby="incident-help"></textarea>
+                  <div class="input-footer"><span id="incident-help">10-4,000 characters</span><span id="incident-count">0 / 4,000</span></div>
+                  <button id="create-investigation" type="submit" class="button primary full-width" disabled>Start investigation <span aria-hidden="true">&rarr;</span></button>
+                  <p id="create-permission" class="help"></p>
+                  <p id="create-message" class="message" role="alert" hidden></p>
+                </form>
+              </section>
+            </div>
+            <section id="investigation-detail" class="detail" aria-labelledby="detail-title" hidden>
+              <div class="detail-heading"><div><span class="eyebrow">INVESTIGATION WORKSPACE</span><h2 id="detail-title" tabindex="-1">Investigation detail</h2><p id="detail-id" class="mono muted"></p></div><button id="download-report" type="button" class="button secondary" disabled>Download report</button></div>
+              <div id="detail-summary"></div>
+              <div class="detail-grid"><section class="panel"><div class="panel-heading"><h3>Diagnosis</h3></div><div id="diagnosis" class="panel-body"></div></section><section class="panel"><div class="panel-heading"><h3>Actions &amp; verification</h3></div><div id="actions" class="panel-body"></div></section></div>
+              <div class="detail-grid"><section class="panel"><div class="panel-heading"><h3>Incident timeline</h3></div><div id="timeline" class="panel-body"></div></section><section class="panel"><div class="panel-heading"><h3>Tested hypotheses</h3></div><div id="hypotheses" class="panel-body"></div></section></div>
+              <section class="panel evidence-panel"><div class="panel-heading"><div><h3>Evidence library</h3><p class="help">Source records are untrusted data, not instructions.</p></div><span id="evidence-count" class="count">Not loaded</span></div><div class="search-field"><label for="evidence-search">Search evidence</label><input id="evidence-search" type="search" placeholder="Search content, source IDs, hashes, or provenance" autocomplete="off"></div><div id="evidence-list" class="evidence-grid"></div></section>
+              <div class="detail-grid"><section class="panel"><div class="panel-heading"><h3>Tool calls</h3></div><div id="tool-calls" class="panel-body"></div></section><section class="panel"><div class="panel-heading"><h3>Decision trace</h3></div><p class="help trace-help">Auditable stage summaries and evidence references, not hidden chain-of-thought.</p><div id="decision-trace" class="panel-body"></div></section></div>
+            </section>
+          </section>
+
+          <section id="view-approvals" aria-labelledby="approvals-title" hidden>
+            <div class="page-heading"><div><span class="eyebrow">REVIEW / AUTHORIZE / VERIFY</span><h1 id="approvals-title" tabindex="-1">Approvals</h1><p>Review the exact action. Keep the human in control.</p></div><button type="button" class="button secondary refresh-button">Refresh data</button></div>
+            <div class="info-strip"><strong>Separation of duties</strong><span>Only an approver or admin who did not request the investigation can decide. Demo operators must switch to the separate demo approver identity.</span></div>
+            <div id="approvals-list" class="approval-grid"><p class="empty">Loading approval queue...</p></div>
+          </section>
+
+          <section id="view-evaluations" aria-labelledby="evaluations-title" hidden>
+            <div class="page-heading"><div><span class="eyebrow">MEASURE / COMPARE / IMPROVE</span><h1 id="evaluations-title" tabindex="-1">Evaluations</h1><p>Persisted benchmark results. No estimated or simulated dashboard metrics.</p></div><button type="button" class="button secondary refresh-button">Refresh data</button></div>
+            <div id="evaluations-content"><p class="empty">Loading evaluation reports...</p></div>
+          </section>
+          <footer class="workspace-footer"><span>ACME OPS ENGINEER <span aria-hidden="true">/</span> Evidence-first operations</span><span id="last-sync">Waiting for first update</span></footer>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

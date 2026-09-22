@@ -73,6 +73,12 @@ class Record(StrictModel):
     attributes: dict[str, str | float | bool] = Field(default_factory=dict)
     reference: str | None = None
 
+    @model_validator(mode="after")
+    def timestamp_has_timezone(self) -> Record:
+        if self.timestamp.tzinfo is None:
+            raise ValueError("Source records require timezone-aware timestamps")
+        return self
+
 
 class Evidence(StrictModel):
     id: str

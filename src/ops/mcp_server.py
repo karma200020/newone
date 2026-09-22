@@ -4,6 +4,7 @@ import asyncio
 import os
 import sys
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -25,7 +26,10 @@ def build_server(group: str, principal: Principal) -> FastMCP:
     if group not in GROUPS:
         raise ValueError("Unknown MCP server group")
     server = FastMCP(f"acme-{group}")
-    provider = SyntheticProvider()
+    configured_index = os.environ.get("OPS_DOCUMENT_INDEX_PATH")
+    provider = SyntheticProvider(
+        document_index=Path(configured_index) if configured_index else None
+    )
     specs = [spec for spec in asyncio.run(provider.discover()) if spec.source in GROUPS[group]]
 
     def bind(spec: ToolSpec) -> Callable[[ToolInput], Awaitable[ToolOutput]]:

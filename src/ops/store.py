@@ -287,12 +287,21 @@ class Store:
                 row.status = "failed"
                 row.error = "Job lease expired after maximum attempts"
                 state_row = session.get(InvestigationRow, row.investigation_id)
-                if state_row and row.kind == "investigate":
+                if state_row:
                     state = Investigation.model_validate(state_row.state)
                     from ops.domain import Status
 
-                    state.status = Status.FAILED
                     state.warnings.append(row.error)
+                    if row.kind == "investigate":
+                        state.status = Status.FAILED
+                    else:
+                        action = next((a for a in state.actions if a.id == row.target), None)
+                        if action and action.status not in {"succeeded", "unverified"}:
+                            action.status = "failed"
+                            action.verification = row.error
+                    from ops.provenance import render_report
+
+                    state.report = render_report(state)
                     state_row.state = state.model_dump(mode="json")
                     state_row.version += 1
                 self.audit(

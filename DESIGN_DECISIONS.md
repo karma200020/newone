@@ -126,3 +126,13 @@ key; setting a key alone does not transmit evidence. The model can corroborate,
 disagree with or abstain from an existing tested hypothesis, never generate
 actions, source IDs or new root-cause prose. It runs before final publication,
 validates citations, records actual provider token usage and exposes failures.
+
+## Phase 13: operations dashboard
+
+The frontend uses native browser APIs and local static assets rather than a
+framework/build pipeline. It retains tokens in memory only, renders untrusted
+text without HTML interpolation, and preserves form state during polling.
+Approval controls require review of the exact digest and an independent
+identity. Empty evaluation history is shown honestly rather than filled with
+sample metrics. Native DOM tests cover client contracts; real browser checks
+exercise operator-to-approver recovery and narrow-screen layout.

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import SecretStr, model_validator
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     llm_escalation_input_cost_per_million: float = 2.0
     llm_escalation_output_cost_per_million: float = 8.0
     embedding_model: str | None = None
+    document_index_path: Path | None = None
     embedding_cost_per_million: float = 0.02
     max_model_tokens: int = 1200
 

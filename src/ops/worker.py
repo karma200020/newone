@@ -105,6 +105,9 @@ async def run_once(store: Store, settings: Settings) -> bool:
                         action.verification = f"Execution failed: {message}"
                         if job.attempts >= settings.max_job_attempts:
                             action.status = "failed"
+                from ops.provenance import render_report
+
+                current.report = render_report(current)
 
             store.mutate(job.tenant_id, job.investigation_id, failed)
             store.finish(job, message)

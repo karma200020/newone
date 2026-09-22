@@ -1,0 +1,12 @@
+{
+  "name": "acme-ops-browser-checks",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test": "node --test tests/frontend.test.mjs",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

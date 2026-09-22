@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 from pydantic import Field
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -131,9 +134,13 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         except ValueError as exc:
             raise HTTPException(404, str(exc)) from exc
         require_service(user, scenario.service)
-        mentioned = [service for service in SERVICES if service in body.description.lower()]
+        mentioned = sorted(
+            set(re.findall(r"\b[a-z][a-z0-9-]*-service\b", body.description.lower()))
+        )
         for service in mentioned:
             require_service(user, service)
+        if len(mentioned) == 1 and mentioned[0] != scenario.service:
+            raise HTTPException(422, "Selected synthetic scenario belongs to a different service")
         state = Investigation(
             request_id=request.state.request_id,
             tenant_id=user.tenant_id,
@@ -193,4 +200,12 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
 
     app.include_router(router)
     app.include_router(telemetry_router)
+    static = Path(__file__).parent / "static"
+    if static.is_dir():
+        app.mount("/static", StaticFiles(directory=static), name="static")
+
+        @app.get("/", include_in_schema=False)
+        def dashboard() -> FileResponse:
+            return FileResponse(static / "index.html")
+
     return app

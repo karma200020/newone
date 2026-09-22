@@ -17,3 +17,6 @@ terraform.tfvars
 !terraform.tfvars.example
 dist/
 build/
+node_modules/
+test-results/
+playwright-report/

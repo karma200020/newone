@@ -5,6 +5,7 @@ import json
 import sys
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
@@ -18,22 +19,31 @@ from ops.tools import Provider, SyntheticProvider, ToolInput, ToolOutput, ToolSp
 
 
 class MCPProvider:
-    def __init__(self, principal: Principal, groups: list[str] | None = None):
+    def __init__(
+        self,
+        principal: Principal,
+        groups: list[str] | None = None,
+        document_index: Path | None = None,
+    ):
         self.principal = principal.model_copy(deep=True)
         self.groups = groups if groups is not None else list(GROUPS)
         self.stack = AsyncExitStack()
         self.sessions: dict[str, ClientSession] = {}
         self.specs: list[ToolSpec] = []
+        self.document_index = document_index
 
     async def __aenter__(self) -> MCPProvider:
         try:
             for group in self.groups:
                 if group not in GROUPS:
                     raise ValueError("Unapproved MCP server group")
+                environment = {"OPS_MCP_PRINCIPAL": self.principal.model_dump_json()}
+                if self.document_index:
+                    environment["OPS_DOCUMENT_INDEX_PATH"] = str(self.document_index.resolve())
                 parameters = StdioServerParameters(
                     command=sys.executable,
                     args=["-m", "ops.mcp_server", group],
-                    env={"OPS_MCP_PRINCIPAL": self.principal.model_dump_json()},
+                    env=environment,
                 )
                 read, write = await self.stack.enter_async_context(stdio_client(parameters))
                 session = await self.stack.enter_async_context(ClientSession(read, write))
@@ -96,7 +106,7 @@ class MCPProvider:
 @asynccontextmanager
 async def open_provider(settings: Settings, principal: Principal) -> AsyncIterator[Provider]:
     if settings.tool_transport == "mcp":
-        async with MCPProvider(principal) as provider:
+        async with MCPProvider(principal, document_index=settings.document_index_path) as provider:
             yield provider
     else:
-        yield SyntheticProvider()
+        yield SyntheticProvider(document_index=settings.document_index_path)

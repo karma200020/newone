@@ -42,3 +42,23 @@ def test_chunk_provenance_and_integrity(tmp_path: Path) -> None:
     path.write_text(path.read_text().replace("Rollback the release", "Tampered the release"))
     with pytest.raises(ValueError, match="integrity"):
         HybridRetriever.load(path)
+
+
+async def test_ingested_index_is_used_by_documentation_tools(tmp_path: Path) -> None:
+    from ops.domain import Principal
+    from ops.tools import SyntheticProvider, ToolGateway, ToolInput
+
+    document = runbooks("checkout-service")[0]
+    document.source_id = "operator-ingested-runbook-v2"
+    index_path = tmp_path / "ingested.json"
+    HybridRetriever([document]).save(index_path)
+    user = Principal(
+        subject="operator", tenant_id="acme", role="operator", services=["checkout-service"]
+    )
+    result = await ToolGateway(SyntheticProvider(index_path)).call(
+        "documentation.search",
+        ToolInput(service="checkout-service", scenario_id="INC-001", query="rollback release"),
+        user,
+    )
+    assert not result.error
+    assert {item.source_id for item in result.evidence} == {"operator-ingested-runbook-v2"}

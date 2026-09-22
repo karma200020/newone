@@ -266,8 +266,8 @@ async def evaluate(baseline: dict[str, float] | None = None) -> dict[str, Any]:
         "limitations": [
             "Synthetic known-signal benchmark, not evidence of real-world diagnostic accuracy.",
             "No live provider, cloud, OIDC or external LLM performance is measured.",
-            "Prompt-injection probes cover seeded attacks, not a comprehensive red-team assessment.",
-            "Approval/execution probes exercise the isolated simulator, not live enterprise systems.",
+            "Injection probes cover seeded attacks, not a comprehensive red-team assessment.",
+            "Approval/execution probes exercise the simulator, not live enterprise systems.",
         ],
         "scenarios": rows,
     }

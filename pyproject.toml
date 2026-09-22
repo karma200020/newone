@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Evidence-driven incident investigation with policy-gated remediation"
 requires-python = ">=3.12"
 dependencies = [
-  "fastapi==0.116.1",
+  "fastapi==0.141.1",
+  "starlette==1.6.0",
   "uvicorn==0.35.0",
   "pydantic==2.11.7",
   "pydantic-settings==2.10.1",
@@ -16,18 +17,21 @@ dependencies = [
   "psycopg[binary]==3.2.9",
   "redis==6.2.0",
   "httpx==0.28.1",
-  "PyJWT[crypto]==2.10.1",
+  "PyJWT[crypto]==2.14.0",
   "sqlglot==26.33.0",
-  "mcp==1.12.4",
+  "mcp==1.30.0",
   "prometheus-client==0.22.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest==8.4.1",
-  "pytest-asyncio==1.1.0",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
   "ruff==0.12.5",
   "mypy==1.17.0",
+  "pip-audit==2.9.0",
+  "pip==26.2.1",
+  "PyYAML==6.0.3",
 ]
 
 [project.scripts]
