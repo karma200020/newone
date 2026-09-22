@@ -111,3 +111,21 @@ admission limits; independent audit retention; provider contract tests; load and
 chaos tests; human-reviewed holdout evaluation; OIDC integration; TLS/domain
 verification; recovery and rollback drills. No cloud account was provisioned by
 the local setup commands.
+
+## GitHub deployment setup
+
+Create protected `image-publishing` and `production` environments, with required
+human reviewers for production. Configure repository/environment variables
+`AWS_REGION`, `ECR_REPOSITORY` (repository name, not URI), `ECS_CLUSTER`,
+`API_SERVICE`, `WORKER_SERVICE`, `AWS_PUBLISH_ROLE_ARN` and
+`AWS_DEPLOY_ROLE_ARN`. Scope each AWS role's GitHub OIDC trust to the exact
+repository and environment; do not grant untrusted PRs deployment credentials.
+
+Only successful main-branch push verification triggers image publication.
+The manual deployment accepts a 40-character commit SHA already published to
+the immutable registry. Initial zero-count service provisioning follows the
+Terraform runbook first. The deployment job does not provision infrastructure
+or mint secrets. It runs the schema command before service updates and fails
+if ECS rolls back instead of reaching the requested revision. If API deployment
+fails after the worker update, inspect compatibility and redeploy the previous
+verified digest; no cross-service atomicity is claimed.

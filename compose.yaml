@@ -1,0 +1,94 @@
+name: acme-ops
+
+x-app: &app
+  image: acme-ops-engineer:local
+  build:
+    context: .
+    target: runtime
+  environment: &app-environment
+    OPS_ENVIRONMENT: local
+    OPS_DEMO_MODE: ${OPS_DEMO_MODE:-false}
+    OPS_SIGNING_KEY: ${OPS_SIGNING_KEY:?Run ops init --demo first}
+    OPS_DATABASE_URL: postgresql+psycopg://ops:${OPS_SIGNING_KEY:?Run ops init --demo first}@postgres:5432/ops
+    OPS_REDIS_URL: redis://:${OPS_SIGNING_KEY:?Run ops init --demo first}@redis:6379/0
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  stop_grace_period: 120s
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: ops
+      POSTGRES_USER: ops
+      POSTGRES_PASSWORD: ${OPS_SIGNING_KEY:?Run ops init --demo first}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-bookworm
+    user: redis
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      REDISCLI_AUTH: ${OPS_SIGNING_KEY:?Run ops init --demo first}
+    command:
+      - sh
+      - -ec
+      - exec redis-server --save '' --appendonly no --requirepass "$$REDISCLI_AUTH"
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli ping | grep -qx PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    <<: *app
+    command: [python, -m, ops.cli, migrate]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: "no"
+
+  worker:
+    <<: *app
+    command: [python, -m, ops.cli, worker]
+    healthcheck:
+      test: [CMD, python, -m, ops.cli, worker-health]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  api:
+    <<: *app
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      worker:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

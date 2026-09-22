@@ -136,3 +136,36 @@ Approval controls require review of the exact digest and an independent
 identity. Empty evaluation history is shown honestly rather than filled with
 sample metrics. Native DOM tests cover client contracts; real browser checks
 exercise operator-to-approver recovery and narrow-screen layout.
+
+## Phase 14: container and AWS reference deployment
+
+A nonroot multi-stage image installs constrained production dependencies only.
+Compose separates API, worker, PostgreSQL and Redis, with migration-gated
+startup, health checks and loopback-only ingress. Terraform defines a two-AZ
+private application/data topology, TLS ingress, separate ECS services, managed
+data services, secret injection, IAM boundaries, logs and alarms. The default
+zero-count deployment supports secret/schema bootstrap before service activation.
+Runtime roles cannot perform live infrastructure remediation.
+
+Terraform formatting, validation and six mocked scenarios passed; Compose was
+schema/static validated. No Linux container execution, live database bootstrap
+or AWS provisioning was performed on this host. Deployment remains gated on
+Docker/cloud tooling, an authorized AWS account, OIDC, TLS and reviewed secrets.
+
+## Phase 15: CI and regression policy
+
+CI combines formatting, strict typing, unit/API/MCP tests, dedicated
+PostgreSQL/Redis integration services, native frontend checks, browser smoke
+tests, measured benchmark thresholds, dependency audit, container build/image
+scan, secret scan and Terraform validation. A successful main-branch check
+can publish a commit-addressed immutable image. Deployment is a separate manual
+workflow behind a protected GitHub environment and short-lived AWS OIDC role.
+It resolves the image digest, checks schema-task completion, updates worker
+before API and verifies the requested task-definition revision actually
+completed rather than mistaking an ECS rollback for successful deployment.
+
+All Python dependencies are pinned, with a complete resolved constraints file.
+The initial dependency audit exposed outdated pins; they were replaced with
+patched releases and revalidated. Production and test-only vulnerabilities
+are not silently ignored. Dependency and benchmark upgrades require rerunning
+the regression suite and reviewing the lock/baseline diff.

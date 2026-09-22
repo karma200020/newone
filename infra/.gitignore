@@ -1,0 +1,18 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+*.auto.tfvars
+*.auto.tfvars.json
+backend.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.env
+*.secret.json
+__pycache__/
+# Keep .terraform.lock.hcl tracked: it pins provider versions and checksums.

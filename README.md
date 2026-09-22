@@ -11,6 +11,7 @@ adapter makes real provider requests only when explicitly enabled. Live GitHub,
 Jira, Slack, monitoring and deployment-provider adapters are not implemented.
 AWS infrastructure is supplied as code; applying it requires your account,
 credentials, domain/certificate and OIDC configuration.
+See the [AWS bootstrap and deployment runbook](infra/README.md).
 
 ## Run locally on Windows
 

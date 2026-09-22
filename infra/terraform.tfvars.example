@@ -1,0 +1,20 @@
+aws_region      = "us-east-1"
+name            = "acme-ops"
+certificate_arn = "arn:aws:acm:us-east-1:111122223333:certificate/00000000-0000-0000-0000-000000000000"
+app_secret_arn  = "arn:aws:secretsmanager:us-east-1:111122223333:secret:acme-ops-app-EXAMPLE"
+
+# This unique tag can be named before the first push, but tasks must stay at zero.
+# After pushing, replace with the repository@sha256:<actual digest> output from ECR.
+image_uri = "111122223333.dkr.ecr.us-east-1.amazonaws.com/acme-ops:release-20260922-01"
+
+oidc_issuer   = "https://identity.example.com/"
+oidc_audience = "acme-ops-api"
+oidc_jwks_url = "https://identity.example.com/.well-known/jwks.json"
+
+desired_count     = 0
+db_multi_az       = true
+deletion_protection = true
+# worker_desired_count = 0  # null/omitted follows desired_count
+# alarm_email = "operations@example.com"
+# app_secret_kms_key_arn = "arn:aws:kms:us-east-1:111122223333:key/..."
+# redis_auth_token must NOT go here. See README for private TF_VAR injection.
