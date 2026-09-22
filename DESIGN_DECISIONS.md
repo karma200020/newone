@@ -52,3 +52,14 @@ learned vectors; it sends selected documents to that provider and must only be
 enabled after data-governance approval. Persistent index files are versioned and
 integrity checked. Exact search is capped at 10,000 chunks; replace it with
 tenant-filtered pgvector/ANN before larger deployments.
+
+## Phase 6: MCP boundaries
+
+Five real stdio MCP servers expose GitHub, Jira, Slack, monitoring and
+documentation tools through the official SDK. Monitoring also hosts logs,
+deployment and database snapshot tools. The client uses standard tool discovery,
+resource reading and tool invocation; read-only annotations must match the typed
+catalog. The trusted worker binds each subprocess identity; tool arguments cannot
+choose a tenant or role. Local and MCP transports share source adapters.
+Provider-specific live enterprise API adapters are not implemented; MCP is real,
+but the data behind these servers remains synthetic.

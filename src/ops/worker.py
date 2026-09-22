@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from ops.agent import Investigator
 from ops.config import Settings, get_settings
 from ops.domain import Investigation, Status
+from ops.mcp_client import open_provider
 from ops.store import ConflictError, Store
-from ops.tools import SyntheticProvider, ToolGateway, redact
+from ops.tools import ToolGateway, redact
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,10 @@ async def run_once(store: Store, settings: Settings) -> bool:
         if state.status == Status.DIAGNOSED:
             store.finish(job)
             return True
-        gateway = ToolGateway(SyntheticProvider(), timeout=settings.tool_timeout_seconds,
-                              retries=settings.tool_retries, audit=audit)
-        await Investigator(gateway, checkpoint).run(state)
+        async with open_provider(settings, state.requested_by) as provider:
+            gateway = ToolGateway(provider, timeout=settings.tool_timeout_seconds,
+                                  retries=settings.tool_retries, audit=audit)
+            await Investigator(gateway, checkpoint).run(state)
         store.finish(job)
     except ConflictError:
         logger.warning("Worker lease or state conflict", extra={"job_id": job.id})
