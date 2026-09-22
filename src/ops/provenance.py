@@ -69,16 +69,19 @@ def render_report(state: Investigation) -> str:
     ]
     if state.diagnosis:
         diagnosis = state.diagnosis
-        lines.extend([
-            diagnosis.root_cause,
-            f"Confidence: {diagnosis.confidence} (not a calibrated probability).",
-            diagnosis.confidence_explanation,
-            "Supporting evidence: " + ", ".join(diagnosis.supporting_evidence),
-            "Contradictory evidence: " + (", ".join(diagnosis.contradictory_evidence) or "none found"),
-            "",
-            "## Uncertainty and missing evidence",
-            *[f"- {item}" for item in diagnosis.uncertainty],
-        ])
+        lines.extend(
+            [
+                diagnosis.root_cause,
+                f"Confidence: {diagnosis.confidence} (not a calibrated probability).",
+                diagnosis.confidence_explanation,
+                "Supporting evidence: " + ", ".join(diagnosis.supporting_evidence),
+                "Contradictory evidence: "
+                + (", ".join(diagnosis.contradictory_evidence) or "none found"),
+                "",
+                "## Uncertainty and missing evidence",
+                *[f"- {item}" for item in diagnosis.uncertainty],
+            ]
+        )
     else:
         lines.append("No diagnosis available.")
     lines.extend(["", "## Timeline"])
@@ -102,8 +105,10 @@ def render_report(state: Investigation) -> str:
         for item in state.actions
     )
     lines.extend(["", "## Approvals"])
-    lines.extend(f"- {a.actor}: {a.decision} for {a.action_id} at {a.timestamp.isoformat()}"
-                 for a in state.approvals)
+    lines.extend(
+        f"- {a.actor}: {a.decision} for {a.action_id} at {a.timestamp.isoformat()}"
+        for a in state.approvals
+    )
     lines.extend(["", "## Tool activity"])
     lines.extend(
         f"- {call.tool}: {call.duration_ms:.1f} ms, {call.attempts} attempt(s), "
@@ -112,21 +117,25 @@ def render_report(state: Investigation) -> str:
     )
     lines.extend(["", "## Evidence manifest"])
     for evidence in state.evidence:
-        lines.extend([
-            f"### {evidence.id}",
-            f"Source: {evidence.source_type.value} / {evidence.source_id}",
-            f"Timestamp: {evidence.timestamp.isoformat()}; tool: {evidence.tool}",
-            f"Reference: {evidence.reference or 'not supplied'}",
-            f"SHA-256 (redacted content): {evidence.content_hash}",
-            f"Quarantined: {evidence.suspicious}",
-            evidence.content,
-            "",
-        ])
-    lines.extend([
-        "## Usage",
-        f"Model: {state.usage.model}; version: {state.usage.model_version}; "
-        f"prompt: {state.usage.prompt_version}",
-        f"Tokens: {state.usage.input_tokens} input / {state.usage.output_tokens} output; "
-        f"estimated provider cost: ${state.usage.cost_usd:.6f}.",
-    ])
+        lines.extend(
+            [
+                f"### {evidence.id}",
+                f"Source: {evidence.source_type.value} / {evidence.source_id}",
+                f"Timestamp: {evidence.timestamp.isoformat()}; tool: {evidence.tool}",
+                f"Reference: {evidence.reference or 'not supplied'}",
+                f"SHA-256 (redacted content): {evidence.content_hash}",
+                f"Quarantined: {evidence.suspicious}",
+                evidence.content,
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Usage",
+            f"Model: {state.usage.model}; version: {state.usage.model_version}; "
+            f"prompt: {state.usage.prompt_version}",
+            f"Tokens: {state.usage.input_tokens} input / {state.usage.output_tokens} output; "
+            f"estimated provider cost: ${state.usage.cost_usd:.6f}.",
+        ]
+    )
     return "\n".join(lines) + "\n"

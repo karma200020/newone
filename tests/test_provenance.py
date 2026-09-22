@@ -8,7 +8,9 @@ from ops.tools import SyntheticProvider, ToolGateway
 
 async def test_report_grounding_and_tamper_rejection(user: Principal) -> None:
     state = Investigation(
-        tenant_id="acme", requested_by=user, scenario_id="INC-001",
+        tenant_id="acme",
+        requested_by=user,
+        scenario_id="INC-001",
         description="Investigate checkout-service returning elevated 5xx errors.",
     )
     await Investigator(ToolGateway(SyntheticProvider())).run(state)

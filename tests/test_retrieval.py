@@ -9,14 +9,22 @@ from ops.synthetic import runbooks
 def test_hybrid_rollback_retrieval_and_metadata(tmp_path: Path) -> None:
     records = runbooks("checkout-service") + runbooks("payment-service")
     index = HybridRetriever(records)
-    results = index.search("How should checkout-service be rolled back? rollback recent release",
-                           service="checkout-service", tenant_id="acme",
-                           metadata={"document_type": "runbook"}, limit=3)
+    results = index.search(
+        "How should checkout-service be rolled back? rollback recent release",
+        service="checkout-service",
+        tenant_id="acme",
+        metadata={"document_type": "runbook"},
+        limit=3,
+    )
     assert results and "deployment-regression" in results[0].record.source_id
     assert all(result.record.service == "checkout-service" for result in results)
     assert not index.search("rollback", service="checkout-service", tenant_id="different")
-    assert not index.search("rollback", service="checkout-service", tenant_id="acme",
-                            metadata={"environment": "production"})
+    assert not index.search(
+        "rollback",
+        service="checkout-service",
+        tenant_id="acme",
+        metadata={"environment": "production"},
+    )
     path = tmp_path / "index.json"
     index.save(path)
     loaded = HybridRetriever.load(path)

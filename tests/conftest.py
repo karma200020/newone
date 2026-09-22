@@ -13,7 +13,8 @@ from ops.synthetic import SERVICES
 @pytest.fixture
 def settings() -> Settings:
     return Settings(
-        environment="test", database_url="sqlite:///:memory:",
+        environment="test",
+        database_url="sqlite:///:memory:",
         signing_key=SecretStr("test-only-signing-key-at-least-32-characters"),
         demo_mode=False,
     )

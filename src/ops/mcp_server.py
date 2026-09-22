@@ -33,11 +33,14 @@ def build_server(group: str, principal: Principal) -> FastMCP:
             require_tool(principal, spec.name)
             require_service(principal, arguments.service)
             return await provider.invoke(spec.name, arguments, principal)
+
         return invoke
 
     for spec in specs:
         server.add_tool(
-            bind(spec), name=spec.name, description=spec.description,
+            bind(spec),
+            name=spec.name,
+            description=spec.description,
             annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False),
         )
 
@@ -50,7 +53,9 @@ def build_server(group: str, principal: Principal) -> FastMCP:
 
 def main() -> None:
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: python -m ops.mcp_server <github|jira|slack|monitoring|documentation>")
+        raise SystemExit(
+            "Usage: python -m ops.mcp_server <github|jira|slack|monitoring|documentation>"
+        )
     # Identity is configured by the trusted parent, never supplied in tool arguments.
     principal = Principal.model_validate_json(os.environ["OPS_MCP_PRINCIPAL"])
     build_server(sys.argv[1], principal).run(transport="stdio")

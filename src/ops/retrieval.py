@@ -101,8 +101,11 @@ class IndexFile(StrictModel):
 
 class HybridRetriever:
     def __init__(
-        self, documents: list[Record], embedder: Embedder | None = None,
-        chunk_size: int = 1200, overlap: int = 150,
+        self,
+        documents: list[Record],
+        embedder: Embedder | None = None,
+        chunk_size: int = 1200,
+        overlap: int = 150,
     ):
         if not 0 <= overlap < chunk_size:
             raise ValueError("Chunk overlap must be smaller than the chunk")
@@ -130,10 +133,16 @@ class HybridRetriever:
             identity = hashlib.sha256(
                 f"{document.tenant_id}:{document.source_id}:{start}:{digest}".encode()
             ).hexdigest()[:24]
-            self.chunks.append(Chunk(
-                id=f"chunk-{identity}", record=document, start=start, end=end,
-                content_hash=digest, embedding=vector,
-            ))
+            self.chunks.append(
+                Chunk(
+                    id=f"chunk-{identity}",
+                    record=document,
+                    start=start,
+                    end=end,
+                    content_hash=digest,
+                    embedding=vector,
+                )
+            )
 
     def save(self, path: Path) -> None:
         data = IndexFile(embedding_model=self.embedder.name, chunks=self.chunks)
@@ -150,7 +159,7 @@ class HybridRetriever:
             raise ValueError("Index schema or embedding version mismatch; reingest documents")
         for chunk in data.chunks:
             digest = hashlib.sha256(
-                chunk.record.content[chunk.start:chunk.end].encode()
+                chunk.record.content[chunk.start : chunk.end].encode()
             ).hexdigest()
             if digest != chunk.content_hash or any(not math.isfinite(v) for v in chunk.embedding):
                 raise ValueError("Index integrity validation failed")
@@ -158,22 +167,30 @@ class HybridRetriever:
         return index
 
     def search(
-        self, query: str, *, service: str, tenant_id: str,
-        metadata: dict[str, str] | None = None, limit: int = 5,
+        self,
+        query: str,
+        *,
+        service: str,
+        tenant_id: str,
+        metadata: dict[str, str] | None = None,
+        limit: int = 5,
     ) -> list[SearchHit]:
         if not 1 <= limit <= 200 or len(query) > 8000:
             raise ValueError("Invalid retrieval query or limit")
         candidates = [
-            chunk for chunk in self.chunks
-            if chunk.record.tenant_id == tenant_id and chunk.record.service == service
-            and all(str(chunk.record.attributes.get(k, "")) == v
-                    for k, v in (metadata or {}).items())
+            chunk
+            for chunk in self.chunks
+            if chunk.record.tenant_id == tenant_id
+            and chunk.record.service == service
+            and all(
+                str(chunk.record.attributes.get(k, "")) == v for k, v in (metadata or {}).items()
+            )
         ]
         if not candidates:
             return []
         query_tokens = tokenize(query)
         query_vector = self.embedder.embed([query])[0]
-        corpus = [tokenize(chunk.record.content[chunk.start:chunk.end]) for chunk in candidates]
+        corpus = [tokenize(chunk.record.content[chunk.start : chunk.end]) for chunk in candidates]
         average_length = sum(len(tokens) for tokens in corpus) / len(corpus) or 1
         document_frequency = Counter(token for tokens in corpus for token in set(tokens))
         keywords: list[float] = []
@@ -186,10 +203,16 @@ class HybridRetriever:
             score = 0.0
             for token in set(query_tokens):
                 frequency = frequencies[token]
-                idf = math.log(1 + (len(corpus) - document_frequency[token] + 0.5)
-                               / (document_frequency[token] + 0.5))
-                score += idf * frequency * 2.2 / (
-                    frequency + 1.2 * (0.25 + 0.75 * len(tokens) / average_length)
+                idf = math.log(
+                    1
+                    + (len(corpus) - document_frequency[token] + 0.5)
+                    / (document_frequency[token] + 0.5)
+                )
+                score += (
+                    idf
+                    * frequency
+                    * 2.2
+                    / (frequency + 1.2 * (0.25 + 0.75 * len(tokens) / average_length))
                 )
             keywords.append(score)
         vector_rank = sorted(range(len(candidates)), key=lambda i: -vectors[i])
@@ -203,15 +226,21 @@ class HybridRetriever:
             if query_tokens and keywords[i] <= 0 and vectors[i] <= 0.1:
                 continue
             # Rerank fused candidates using exact query phrase coverage.
-            content = chunk.record.content[chunk.start:chunk.end].lower()
+            content = chunk.record.content[chunk.start : chunk.end].lower()
             pairs = list(zip(query_tokens, query_tokens[1:], strict=False))
             phrase_score = sum(f"{a} {b}" in content for a, b in pairs) / max(1, len(pairs))
-            hits.append(SearchHit(
-                chunk_id=chunk.id, record=chunk.record,
-                score=fusion[i] + 0.01 * phrase_score,
-                vector_score=vectors[i], keyword_score=keywords[i],
-                content_hash=chunk.content_hash, start=chunk.start, end=chunk.end,
-            ))
+            hits.append(
+                SearchHit(
+                    chunk_id=chunk.id,
+                    record=chunk.record,
+                    score=fusion[i] + 0.01 * phrase_score,
+                    vector_score=vectors[i],
+                    keyword_score=keywords[i],
+                    content_hash=chunk.content_hash,
+                    start=chunk.start,
+                    end=chunk.end,
+                )
+            )
         return sorted(hits, key=lambda h: (-h.score, h.chunk_id))[:limit]
 
 

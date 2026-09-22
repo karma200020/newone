@@ -82,3 +82,12 @@ precision/recall, temporal ordering, tool behavior, grounding, latency and cost.
 Fault and injection probes exercise actual gateway paths. A strict regression
 gate rejects quality and safety regressions. Fixture-perfect scores are
 explicitly not a claim of generalization.
+
+## Phase 9: independent policy engine
+
+Risk is classified from a trusted action-kind table, never model output.
+Parameters must match executor allowlists and valid setting/value pairs.
+Approval decisions bind proposal content and require a separate scoped human.
+The policy engine validates provenance again and cannot authorize live or
+arbitrary-command execution. Security boundaries and residual risks are
+documented separately; no prompt is treated as an authorization mechanism.

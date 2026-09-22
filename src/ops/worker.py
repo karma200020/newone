@@ -26,8 +26,15 @@ async def run_once(store: Store, settings: Settings) -> bool:
             store.check_lease(session, job)
             for field in Investigation.model_fields:
                 setattr(current, field, getattr(updated, field))
-            store.audit(session, current.tenant_id, "worker", "investigation.checkpoint",
-                        {"stage": current.status.value, "run_id": current.run_id}, current.id)
+            store.audit(
+                session,
+                current.tenant_id,
+                "worker",
+                "investigation.checkpoint",
+                {"stage": current.status.value, "run_id": current.run_id},
+                current.id,
+            )
+
         store.mutate(job.tenant_id, job.investigation_id, save)
 
     def audit(data: dict[str, object]) -> None:
@@ -41,8 +48,12 @@ async def run_once(store: Store, settings: Settings) -> bool:
             store.finish(job)
             return True
         async with open_provider(settings, state.requested_by) as provider:
-            gateway = ToolGateway(provider, timeout=settings.tool_timeout_seconds,
-                                  retries=settings.tool_retries, audit=audit)
+            gateway = ToolGateway(
+                provider,
+                timeout=settings.tool_timeout_seconds,
+                retries=settings.tool_retries,
+                audit=audit,
+            )
             await Investigator(gateway, checkpoint).run(state)
         store.finish(job)
     except ConflictError:
@@ -52,11 +63,14 @@ async def run_once(store: Store, settings: Settings) -> bool:
         logger.exception("Investigation job failed", extra={"job_id": job.id})
         message = redact(f"{type(exc).__name__}: {exc}")[:500]
         try:
+
             def failed(current: Investigation, session: Session) -> None:
                 store.check_lease(session, job)
                 current.warnings.append(f"Worker attempt {job.attempts} failed: {message}")
-                current.status = (Status.FAILED if job.attempts >= settings.max_job_attempts
-                                  else Status.QUEUED)
+                current.status = (
+                    Status.FAILED if job.attempts >= settings.max_job_attempts else Status.QUEUED
+                )
+
             store.mutate(job.tenant_id, job.investigation_id, failed)
             store.finish(job, message)
         except ConflictError:

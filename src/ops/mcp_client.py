@@ -31,22 +31,28 @@ class MCPProvider:
                 if group not in GROUPS:
                     raise ValueError("Unapproved MCP server group")
                 parameters = StdioServerParameters(
-                    command=sys.executable, args=["-m", "ops.mcp_server", group],
+                    command=sys.executable,
+                    args=["-m", "ops.mcp_server", group],
                     env={"OPS_MCP_PRINCIPAL": self.principal.model_dump_json()},
                 )
                 read, write = await self.stack.enter_async_context(stdio_client(parameters))
                 session = await self.stack.enter_async_context(ClientSession(read, write))
                 await asyncio.wait_for(session.initialize(), 30)
                 advertised = await session.list_tools()
-                listed = {tool.name for tool in advertised.tools
-                          if tool.annotations and tool.annotations.readOnlyHint}
+                listed = {
+                    tool.name
+                    for tool in advertised.tools
+                    if tool.annotations and tool.annotations.readOnlyHint
+                }
                 resource = await session.read_resource("ops://catalog")  # type: ignore[arg-type]
                 if len(resource.contents) != 1 or not isinstance(
-                    resource.contents[0], TextResourceContents,
+                    resource.contents[0],
+                    TextResourceContents,
                 ):
                     raise ValueError("Invalid MCP catalog resource")
-                specs = [ToolSpec.model_validate(item)
-                         for item in json.loads(resource.contents[0].text)]
+                specs = [
+                    ToolSpec.model_validate(item) for item in json.loads(resource.contents[0].text)
+                ]
                 for spec in specs:
                     if spec.name not in listed or spec.name in self.sessions:
                         raise ValueError("MCP catalog does not match read-only tool discovery")
@@ -64,14 +70,18 @@ class MCPProvider:
         return list(self.specs)
 
     async def invoke(
-        self, name: str, arguments: ToolInput, principal: Principal,
+        self,
+        name: str,
+        arguments: ToolInput,
+        principal: Principal,
     ) -> ToolOutput:
         if principal != self.principal:
             raise PermissionError("MCP session identity mismatch")
         if name not in self.sessions:
             raise ValueError("Tool not discovered")
         result = await self.sessions[name].call_tool(
-            name, {"arguments": arguments.model_dump(mode="json")},
+            name,
+            {"arguments": arguments.model_dump(mode="json")},
         )
         if result.isError:
             raise ValueError(f"MCP tool failed: {name}")

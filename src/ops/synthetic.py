@@ -143,16 +143,20 @@ def generate_scenarios(tenant_id: str = "acme") -> list[Scenario]:
                 suffix: str,
                 minutes: int,
                 content: str,
+                _scenario_id: str = scenario_id,
+                _records: list[Record] = records,
+                _service: str = service,
+                _onset: datetime = onset,
                 **attributes: str | float | bool,
             ) -> str:
-                source_id = f"{scenario_id}:{suffix}"
-                records.append(
+                source_id = f"{_scenario_id}:{suffix}"
+                _records.append(
                     Record(
                         source=source,
                         source_id=source_id,
                         tenant_id=tenant_id,
-                        service=service,
-                        timestamp=onset + timedelta(minutes=minutes),
+                        service=_service,
+                        timestamp=_onset + timedelta(minutes=minutes),
                         content=content,
                         attributes=attributes,
                         reference=f"acme://{source.value}/{source_id}",
@@ -161,55 +165,93 @@ def generate_scenarios(tenant_id: str = "acme") -> list[Scenario]:
                 return source_id
 
             add(
-                Source.MONITORING, "baseline", -10,
+                Source.MONITORING,
+                "baseline",
+                -10,
                 f"{service}: normal traffic and latency before incident.",
-                metric="error_rate", value=0.002, latency_ms=110.0,
-                request_rate=240.0, memory_percent=42.0, phase="before",
+                metric="error_rate",
+                value=0.002,
+                latency_ms=110.0,
+                request_rate=240.0,
+                memory_percent=42.0,
+                phase="before",
             )
             change_signal = rule.signals[1] if kind in (0, 6) else "release_unchanged"
             change_id = add(
-                Source.DEPLOYMENTS, "change", -2,
+                Source.DEPLOYMENTS,
+                "change",
+                -2,
                 f"Deployment/configuration history: {change_signal}; revision v2.4.{variant}.",
-                signal=change_signal, revision=f"v2.4.{variant}",
-                previous_revision="v2.3.9", environment="synthetic",
+                signal=change_signal,
+                revision=f"v2.4.{variant}",
+                previous_revision="v2.3.9",
+                environment="synthetic",
             )
             log_id = add(
-                Source.LOGS, "error", 0,
+                Source.LOGS,
+                "error",
+                0,
                 f"ERROR request failed: {rule.signals[0]}; trace=trace-{scenario_id}",
-                signal=rule.signals[0], level="error", phase="during",
+                signal=rule.signals[0],
+                level="error",
+                phase="during",
             )
             metric_id = add(
-                Source.MONITORING, "anomaly", 1,
+                Source.MONITORING,
+                "anomaly",
+                1,
                 f"Alert: {rule.signals[1]}; 5xx rate=0.18; latency p95=2400ms.",
-                signal=rule.signals[1], metric="error_rate", value=0.18,
-                latency_ms=2400.0, request_rate=235.0,
-                memory_percent=96.0 if kind == 5 else 48.0, phase="during",
+                signal=rule.signals[1],
+                metric="error_rate",
+                value=0.18,
+                latency_ms=2400.0,
+                request_rate=235.0,
+                memory_percent=96.0 if kind == 5 else 48.0,
+                phase="during",
             )
             add(
-                Source.GITHUB, "commit", -3,
+                Source.GITHUB,
+                "commit",
+                -3,
                 "Commit updates response serializer; PR #184 reviewed. "
-                + ("diff: response.total renamed response.amount." if kind == 0
-                   else "No executable changes to the affected component."),
-                repository=f"acme/{service}", commit=f"a{variant}{kind}39cd",
-                pull_request="184", changed_files="src/serializer.py",
+                + (
+                    "diff: response.total renamed response.amount."
+                    if kind == 0
+                    else "No executable changes to the affected component."
+                ),
+                repository=f"acme/{service}",
+                commit=f"a{variant}{kind}39cd",
+                pull_request="184",
+                changed_files="src/serializer.py",
             )
             add(
-                Source.JIRA, "ticket", 2,
+                Source.JIRA,
+                "ticket",
+                2,
                 f"OPS-{100 + kind}: investigate {service} error budget burn; "
                 "customer checkout attempts are failing.",
-                issue_type="incident", status="open",
+                issue_type="incident",
+                status="open",
             )
             add(
-                Source.SLACK, "message", 3,
+                Source.SLACK,
+                "message",
+                3,
                 f"On-call: errors began at {onset.isoformat()}. Investigating; "
                 "do not assume the recent change is causal.",
-                channel="incidents", author="oncall",
+                channel="incidents",
+                author="oncall",
             )
             add(
-                Source.DATABASE, "database", 1,
+                Source.DATABASE,
+                "database",
+                1,
                 "Read-only database snapshot: "
-                + ("active connections=100, limit=100." if kind == 1
-                   else "active connections=24, limit=100."),
+                + (
+                    "active connections=100, limit=100."
+                    if kind == 1
+                    else "active connections=24, limit=100."
+                ),
                 active_connections=100.0 if kind == 1 else 24.0,
                 connection_limit=100.0,
             )
@@ -224,8 +266,9 @@ def generate_scenarios(tenant_id: str = "acme") -> list[Scenario]:
                     description=f"Investigate why {service} started returning elevated 5xx "
                     f"errors around {onset.isoformat()}.",
                     service=service,
-                    window=Window(start=onset - timedelta(minutes=15),
-                                  end=onset + timedelta(minutes=15)),
+                    window=Window(
+                        start=onset - timedelta(minutes=15), end=onset + timedelta(minutes=15)
+                    ),
                     records=records,
                     ground_truth=rule.id,
                     expected_evidence=expected,

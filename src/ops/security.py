@@ -15,19 +15,25 @@ def issue_token(settings: Settings, principal: Principal) -> str:
         raise ValueError("Local tokens are disabled in production; use OIDC")
     now = utcnow()
     return jwt.encode(
-        {**principal.model_dump(), "sub": principal.subject,
-         "iat": now, "exp": now + timedelta(hours=1),
-         "iss": settings.auth_issuer, "aud": settings.auth_audience},
-        settings.signing_key.get_secret_value(), algorithm="HS256",
+        {
+            **principal.model_dump(),
+            "sub": principal.subject,
+            "iat": now,
+            "exp": now + timedelta(hours=1),
+            "iss": settings.auth_issuer,
+            "aud": settings.auth_audience,
+        },
+        settings.signing_key.get_secret_value(),
+        algorithm="HS256",
     )
 
 
 class Authenticator:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.jwks = PyJWKClient(settings.oidc_jwks_url, timeout=5) if (
-            settings.oidc_jwks_url
-        ) else None
+        self.jwks = (
+            PyJWKClient(settings.oidc_jwks_url, timeout=5) if (settings.oidc_jwks_url) else None
+        )
 
     def decode(self, token: str) -> Principal:
         try:
@@ -37,13 +43,19 @@ class Authenticator:
                 key = self.jwks.get_signing_key_from_jwt(token).key
                 algorithm = "RS256"
             claims = jwt.decode(
-                token, key, algorithms=[algorithm],
-                audience=self.settings.auth_audience, issuer=self.settings.auth_issuer,
+                token,
+                key,
+                algorithms=[algorithm],
+                audience=self.settings.auth_audience,
+                issuer=self.settings.auth_issuer,
                 options={"require": ["exp", "iat", "sub", "tenant_id", "role", "services"]},
             )
             return Principal(
-                subject=claims["sub"], tenant_id=claims["tenant_id"], role=claims["role"],
-                services=claims["services"], tools=claims.get("tools", []),
+                subject=claims["sub"],
+                tenant_id=claims["tenant_id"],
+                role=claims["role"],
+                services=claims["services"],
+                tools=claims.get("tools", []),
             )
         except (jwt.PyJWTError, ValidationError, KeyError, TypeError) as exc:
             raise HTTPException(401, "Invalid or expired access token") from exc
