@@ -91,3 +91,12 @@ Approval decisions bind proposal content and require a separate scoped human.
 The policy engine validates provenance again and cannot authorize live or
 arbitrary-command execution. Security boundaries and residual risks are
 documented separately; no prompt is treated as an authorization mechanism.
+
+## Phase 10: human decisions
+
+The approval queue exposes the complete proposal and digest. A separate
+authenticated approver reviews the exact digest before approve/reject.
+Decision, audit record and execution-job insertion commit in one transaction.
+Repeated identical decisions are idempotent; conflicting or stale decisions
+return 409. Rejection never queues execution. Demo mode offers distinct
+operator and approver identities and is prohibited in production.

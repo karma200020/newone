@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -38,6 +38,10 @@ class CreateInvestigation(StrictModel):
     description: str = Field(min_length=10, max_length=4000)
     scenario_id: str = Field(default="INC-001", pattern=r"^INC-\d{3}$")
     window: Window | None = None
+
+
+class DemoLogin(StrictModel):
+    role: Literal["operator", "approver"] = "operator"
 
 
 def create_app(settings: Settings | None = None, store: Store | None = None) -> FastAPI:
@@ -85,10 +89,12 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
         return {"demo_login": settings.demo_mode, "data_mode": "synthetic"}
 
     @app.post("/api/v1/auth/demo")
-    def demo_login() -> dict[str, str]:
+    def demo_login(body: DemoLogin = DemoLogin()) -> dict[str, str]:
         if not settings.demo_mode:
             raise HTTPException(404, "Demo login is disabled")
-        demo = Principal(subject="demo-operator", tenant_id="acme", role="admin", services=SERVICES)
+        demo = Principal(
+            subject=f"demo-{body.role}", tenant_id="acme", role=body.role, services=SERVICES
+        )
         return {"access_token": issue_token(settings, demo), "token_type": "bearer"}
 
     @app.get("/api/v1/me")
@@ -171,4 +177,7 @@ def create_app(settings: Settings | None = None, store: Store | None = None) -> 
             raise HTTPException(409, "Report is not yet available")
         return PlainTextResponse(state.report, media_type="text/markdown")
 
+    from ops.approvals import router
+
+    app.include_router(router)
     return app
