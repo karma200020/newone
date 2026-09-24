@@ -127,7 +127,7 @@ jobs:
       - name: Build non-root application image
         run: docker build --tag acme-ops:${{ github.sha }} .
       - name: Scan image and configuration
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: acme-ops:${{ github.sha }}
           format: table
