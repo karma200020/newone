@@ -18,7 +18,7 @@ dependencies = [
   "redis==6.2.0",
   "httpx==0.28.1",
   "PyJWT[crypto]==2.14.0",
-  "sqlglot==26.33.0",
+  "sqlglot==30.18.0",
   "mcp==1.30.0",
   "prometheus-client==0.22.1",
 ]
