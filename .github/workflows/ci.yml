@@ -14,6 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  publication-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Reject private and generated paths throughout history
+        run: python scripts/check_publication.py --history
+      - name: Scan complete Git history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -41,6 +59,8 @@ jobs:
       OPS_INTEGRATION_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -76,7 +96,11 @@ jobs:
         if: always()
         with:
           name: verification-reports
-          path: artifacts/
+          path: |
+            artifacts/tests.xml
+            artifacts/evaluation.json
+            artifacts/evaluation.md
+            artifacts/dependency-audit.json
           retention-days: 14
 
   infrastructure:
@@ -84,6 +108,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.13.5"
@@ -108,7 +134,3 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
-      - name: Scan repository for secrets
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -122,6 +122,9 @@ human reviewers for production. Configure repository/environment variables
 repository and environment; do not grant untrusted PRs deployment credentials.
 
 Only successful main-branch push verification triggers image publication.
+Publication is disabled until the repository-level variable
+`AWS_PUBLISH_ENABLED=true` is explicitly set after AWS and environment
+configuration. Ordinary GitHub pushes do not otherwise initiate cloud access.
 The manual deployment accepts a 40-character commit SHA already published to
 the immutable registry. Initial zero-count service provisioning follows the
 Terraform runbook first. The deployment job does not provision infrastructure

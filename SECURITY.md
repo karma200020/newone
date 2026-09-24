@@ -42,6 +42,28 @@ application state database. Provider destinations are fixed; no user-defined
 MCP commands or URLs are accepted. OIDC JWKS configuration is a trusted
 administrator-controlled egress destination.
 
+## Publishing safely
+
+Before a push, run `python scripts/check_publication.py --history` and
+`gitleaks git . --log-opts="--all" --redact=100`. The first command blocks
+private/generated paths; Gitleaks checks file contents, including commit
+history. CI runs both checks in an independent job with a full-history
+checkout. Neither check proves the absence of every possible secret.
+
+Keep local environment variants, credentials/private keys, database snapshots,
+logs, Terraform inputs/state, and generated artifacts out of Git. Only
+sanitized `.env.example` and infrastructure `*.example` templates should be
+published. Adding an ignore rule does not remove previously committed data:
+if a real credential is ever committed, revoke it before considering history
+remediation. Do not post sensitive reports or credentials in public issues.
+
+Enable GitHub secret scanning/push protection when available and protect `main`
+with required CI checks. Configure cloud credentials only through protected
+environments and OIDC, never repository files. Review source and Git author
+metadata before choosing public visibility. No license is implicitly granted
+by these publication checks; choose a license deliberately before advertising
+the repository as open source.
+
 ## Limitations
 
 Remediation is **synthetic only**, isolated to database simulator state. No live

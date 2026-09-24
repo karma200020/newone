@@ -116,6 +116,23 @@ real-world diagnostic accuracy.
 | Operations dashboard | `src/ops/static/` |
 | Infrastructure and automation | `infra/`, `.github/workflows/` |
 
+## GitHub publication
+
+The repository is prepared locally; creating a remote or pushing is a separate
+step. Before publishing:
+
+```powershell
+.\.venv\Scripts\python scripts\check_publication.py --history
+gitleaks git . --log-opts="--all" --redact=100
+git status --short
+```
+
+Gitleaks must be installed separately from its official release. Start with a
+private repository if visibility has not been decided. Never upload the entire
+workspace as an archive: it contains ignored local secrets and databases.
+Use Git to publish only reviewed tracked files. See [publication security](SECURITY.md)
+for credential handling, GitHub protection settings, and licensing considerations.
+
 ## Documentation
 
 [Architecture](ARCHITECTURE.md) · [Security](SECURITY.md) ·

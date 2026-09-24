@@ -30,6 +30,8 @@ jobs:
       IMAGE_TAG: ${{ inputs.image_tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Validate deployment input
         shell: bash
         run: |
