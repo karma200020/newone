@@ -39,7 +39,7 @@ jobs:
           [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "An immutable commit SHA is required"; exit 1; }
           test -n "$AWS_REGION" && test -n "$ECR_REPOSITORY"
           test -n "$ECS_CLUSTER" && test -n "$API_SERVICE" && test -n "$WORKER_SERVICE"
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
